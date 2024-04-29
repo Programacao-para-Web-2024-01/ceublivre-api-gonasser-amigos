@@ -156,6 +156,36 @@ func removeFromWishlist(c *gin.Context) {
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "item not found in wishlist"})
 }
 
+func shareWishlist(c *gin.Context) {
+	userID := c.Query("user_id")
+
+	// Verifica se o usuário tem uma lista de desejos
+	wishlistItems, ok := wishlist[userID]
+	if !ok {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "wishlist not found for user"})
+		return
+	}
+
+	// Retorna os itens da lista de desejos do usuário
+	c.IndentedJSON(http.StatusOK, gin.H{"user_id": userID, "wishlist": wishlistItems})
+}
+
+func checkAvailabilityAndNotify() {
+	for userID, wishlistItems := range wishlist {
+		for _, itemID := range wishlistItems {
+			// Verifica se o item está disponível novamente
+			item, err := getItemByIDFromInventory(itemID)
+			if err != nil {
+				continue
+			}
+			if item.Quantity > 0 {
+				// Item disponível, enviar notificação
+				sendNotification(userID, "Item "+itemID+" is available again!")
+			}
+		}
+	}
+}
+
 func main() {
 	router := gin.Default()
 	router.GET("/item", getItem)
@@ -165,6 +195,14 @@ func main() {
 	router.PATCH("/return", returnItem)
 	router.POST("/wishlist/add", addToWishlist)
 	router.DELETE("/wishlist/remove", removeFromWishlist)
+	router.GET("/wishlist/share", shareWishlist) // Adicionando o endpoint de compartilhamento
 	router.Run("localhost:8080")
-}
 
+	// Verifica a disponibilidade dos itens na lista de desejos e envia notificações a cada 24 horas
+	go func() {
+		for {
+			time.Sleep(24 * time.Hour)
+			checkAvailabilityAndNotify()
+		}
+	}()
+}
