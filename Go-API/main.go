@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -156,6 +158,7 @@ func removeFromWishlist(c *gin.Context) {
 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "item not found in wishlist"})
 }
 
+// Compartilhar lista
 func shareWishlist(c *gin.Context) {
 	userID := c.Query("user_id")
 
@@ -170,6 +173,14 @@ func shareWishlist(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, gin.H{"user_id": userID, "wishlist": wishlistItems})
 }
 
+// Função para enviar notificações
+func sendNotification(userID, message string) {
+	// Aqui você pode implementar a lógica para enviar notificações, por exemplo, por e-mail ou aplicativo
+	// Por enquanto, vamos apenas imprimir as notificações no console
+	println("Notification for User", userID+":", message)
+}
+
+// Verificar item
 func checkAvailabilityAndNotify() {
 	for userID, wishlistItems := range wishlist {
 		for _, itemID := range wishlistItems {
@@ -196,13 +207,3 @@ func main() {
 	router.POST("/wishlist/add", addToWishlist)
 	router.DELETE("/wishlist/remove", removeFromWishlist)
 	router.GET("/wishlist/share", shareWishlist) // Adicionando o endpoint de compartilhamento
-	router.Run("localhost:8080")
-
-	// Verifica a disponibilidade dos itens na lista de desejos e envia notificações a cada 24 horas
-	go func() {
-		for {
-			time.Sleep(24 * time.Hour)
-			checkAvailabilityAndNotify()
-		}
-	}()
-}
