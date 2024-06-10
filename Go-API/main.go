@@ -1,9 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
+
 	"github.com/gin-gonic/gin"
+	"github.com/go-sql-driver/mysql"
 )
 
 type Item struct {
@@ -18,6 +21,20 @@ var inventory = []Item{
 	{ID: "2", Nome: "The Great Gatsby", Valor: "50.00", Quantity: 5},
 	{ID: "3", Nome: "War and Peace", Valor: "25.50", Quantity: 6},
 }
+
+func connectDB() *sql.DB {
+	config := mysql.NewConfig()
+	config.User = "root"
+	config.Passwd = "uniceub"
+	config.DBName = "web"
+	conn, err := mysql.NewConnector(config)
+	if err != nil {
+		panic(err)
+	}
+	return sql.OpenDB(conn)
+}
+
+var db *sql.DB
 
 func getItem(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, inventory)
@@ -100,11 +117,16 @@ func createItem(c *gin.Context) {
 }
 
 func main() {
+	db = connectDB()
+	defer db.Close()
+
 	router := gin.Default()
 	router.GET("/item", getItem)
 	router.GET("/item/:id", getItemByID)
 	router.POST("/item", createItem)
 	router.PATCH("/checkout", checkoutItem)
 	router.PATCH("/return", returnItem)
+
+	// Inicia o servidor na porta 8080
 	router.Run("localhost:8080")
 }
