@@ -3,8 +3,6 @@ package main
 import (
 	"errors"
 	"net/http"
-	"time"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,18 +13,11 @@ type Item struct {
 	Quantity int    `json:"quantity"`
 }
 
-type WishlistItem struct {
-	UserID string `json:"user_id"`
-	ItemID string `json:"item_id"`
-}
-
 var inventory = []Item{
 	{ID: "1", Nome: "In Search of Lost Time", Valor: "30.00", Quantity: 2},
 	{ID: "2", Nome: "The Great Gatsby", Valor: "50.00", Quantity: 5},
 	{ID: "3", Nome: "War and Peace", Valor: "25.50", Quantity: 6},
 }
-
-var wishlist = make(map[string][]string)
 
 func getItem(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, inventory)
@@ -96,7 +87,6 @@ func getItemByIDFromInventory(id string) (*Item, error) {
 	return nil, errors.New("item not found")
 }
 
-//Criando item
 func createItem(c *gin.Context) {
 	var newItem Item
 
@@ -109,94 +99,6 @@ func createItem(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, newItem)
 }
 
-//adicionando a wishlist
-func addToWishlist(c *gin.Context) {
-	userID := c.Query("user_id")
-	itemID := c.Query("item_id")
-
-	if userID == "" || itemID == "" {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "missing user_id or item_id query parameter"})
-		return
-	}
-
-	wishlistItems, ok := wishlist[userID]
-	if !ok {
-		wishlistItems = []string{}
-	}
-
-	wishlistItems = append(wishlistItems, itemID)
-	wishlist[userID] = wishlistItems
-
-	c.IndentedJSON(http.StatusCreated, gin.H{"message": "item added to wishlist"})
-}
-
-//remover da wishlist
-func removeFromWishlist(c *gin.Context) {
-	userID := c.Query("user_id")
-	itemID := c.Query("item_id")
-
-	if userID == "" || itemID == "" {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "missing user_id or item_id query parameter"})
-		return
-	}
-
-	wishlistItems, ok := wishlist[userID]
-	if !ok {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "wishlist not found for user"})
-		return
-	}
-
-	for i, id := range wishlistItems {
-		if id == itemID {
-			wishlistItems = append(wishlistItems[:i], wishlistItems[i+1:]...)
-			wishlist[userID] = wishlistItems
-			c.IndentedJSON(http.StatusOK, gin.H{"message": "item removed from wishlist"})
-			return
-		}
-	}
-
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "item not found in wishlist"})
-}
-
-// Compartilhar lista
-func shareWishlist(c *gin.Context) {
-	userID := c.Query("user_id")
-
-	// Verifica se o usuário tem uma lista de desejos
-	wishlistItems, ok := wishlist[userID]
-	if !ok {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "wishlist not found for user"})
-		return
-	}
-
-	// Retorna os itens da lista de desejos do usuário
-	c.IndentedJSON(http.StatusOK, gin.H{"user_id": userID, "wishlist": wishlistItems})
-}
-
-// Função para enviar notificações
-func sendNotification(userID, message string) {
-	// Aqui você pode implementar a lógica para enviar notificações, por exemplo, por e-mail ou aplicativo
-	// Por enquanto, vamos apenas imprimir as notificações no console
-	println("Notification for User", userID+":", message)
-}
-
-// Verificar item
-func checkAvailabilityAndNotify() {
-	for userID, wishlistItems := range wishlist {
-		for _, itemID := range wishlistItems {
-			// Verifica se o item está disponível novamente
-			item, err := getItemByIDFromInventory(itemID)
-			if err != nil {
-				continue
-			}
-			if item.Quantity > 0 {
-				// Item disponível, enviar notificação
-				sendNotification(userID, "Item "+itemID+" is available again!")
-			}
-		}
-	}
-}
-
 func main() {
 	router := gin.Default()
 	router.GET("/item", getItem)
@@ -204,6 +106,5 @@ func main() {
 	router.POST("/item", createItem)
 	router.PATCH("/checkout", checkoutItem)
 	router.PATCH("/return", returnItem)
-	router.POST("/wishlist/add", addToWishlist)
-	router.DELETE("/wishlist/remove", removeFromWishlist)
-	router.GET("/wishlist/share", shareWishlist) // Adicionando o endpoint de compartilhamento
+	router.Run("localhost:8080")
+}
